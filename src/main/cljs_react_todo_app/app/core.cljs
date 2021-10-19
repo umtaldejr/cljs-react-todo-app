@@ -34,14 +34,22 @@
 (defn todo-input []
   (let [input-text (r/atom "")
         update-text #(reset! input-text %)
-        save #(add-todo @input-text)]
+        stop #(reset! input-text "")
+        save #(do (add-todo @input-text)
+                  (stop))
+        key-pressed #(case %
+                       "Enter" (save)
+                       "Esc" (stop)
+                       "Escape" (stop)
+                       nil)]
     (fn []
       [:input {:class "new-todo"
                :placeholder "Todo input"
                :type "text"
                :value @input-text
                :on-blur save
-               :on-change #(update-text (.. % -target -value))}])))
+               :on-change #(update-text (.. % -target -value))
+               :on-key-down #(key-pressed (.. % -key))}])))
 
 (defn task-entry []
   [:header.header
