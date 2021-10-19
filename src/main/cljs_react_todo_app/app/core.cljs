@@ -103,8 +103,13 @@
                       :on-save (fn [text] (save-todo id text))
                       :on-stop #(reset! editing false)}])])))
 
-(defn task-list []
+(defn task-list [showing]
   (let [items (vals @todos)
+        filter-fn (case @showing
+                    :done :done
+                    :active (complement :done)
+                    :all identity)
+        visible-items (filter filter-fn items)
         all-completed? (every? :done items)]
     [:section.main
      [:input {:id "toggle-all"
@@ -114,26 +119,39 @@
               :on-change #(complete-all-toggle (not all-completed?))}]
      [:label {:for "toggle-all"} "Mark all as completed"]
      [:ul.todo-list
-      (for [todo items]
+      (for [todo visible-items]
         ^{:key (:id todo)} [todo-item todo])]]))
 
-(defn footer-controls []
+(defn footer-controls [showing]
   (let [items (vals @todos)
-        done-count (count (filter :done items))]
+        done-count (count (filter :done items))
+        active-count (- (count items) done-count)
+        props-for (fn [kw]
+                    {:class (when (= kw @showing) "selected")
+                     :on-click #(reset! showing kw)
+                     :href "#"})]
     [:footer.footer
+     [:span.todo-count
+      [:strong active-count] " " (case active-count 1 "item" "items") " left"]
+     [:ul.filters
+      [:li [:a (props-for :all) "All"]]
+      [:li [:a (props-for :active) "Active"]]
+      [:li [:a (props-for :done) "Completed"]]]
      (when (pos? done-count)
        [:button.clear-completed {:on-click clear-completed} "Clear completed"])]))
 
 (defn app []
-  [:div
-   [:section.todoapp
-    [task-entry]
-    (when (seq @todos)
+  (let [showing (r/atom :all)]
+    (fn []
       [:div
-       [task-list]
-       [footer-controls]])]
-   [:footer.info
-    [:p "Double-click to edit a to-do"]]])
+       [:section.todoapp
+        [task-entry]
+        (when (seq @todos)
+          [:div
+           [task-list showing]
+           [footer-controls showing]])]
+       [:footer.info
+        [:p "Double-click to edit a to-do"]]])))
 
 ;; ----- Render -----
 
