@@ -1,6 +1,7 @@
 (ns cljs-react-todo-app.app.core
   (:require [reagent.core :as r]
-            [reagent.dom :as rdom]))
+            [reagent.dom :as rdom]
+            [cljs.pprint :as pp]))
 
 ;; ----- App State -----
 
@@ -13,6 +14,13 @@
 (defonce todos (r/atom initial-todos-sorted))
 
 (defonce counter (r/atom 3))
+
+;; ----- Watch -----
+
+(add-watch todos :todos
+           (fn [key _atom _old-state new-state]
+             (println "---" key "atom changed ---")
+             (pp/pprint new-state)))
 
 ;; ----- Utils -----
 
