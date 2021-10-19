@@ -24,12 +24,17 @@
    [:h1 "todos"]
    [todo-input]])
 
+(defn todo-item [{:keys [title]}]
+  [:li
+   [:div.view
+    [:label title]]])
+
 (defn task-list []
   (let [items (vals @todos)]
     [:section.main
      [:ul.todo-list
       (for [todo items]
-        ^{:key (:id todo)} [:li (:title todo)])]]))
+        ^{:key (:id todo)} [todo-item todo])]]))
 
 (defn footer-controls []
   [:footer.footer
