@@ -2,7 +2,14 @@
   (:require [reagent.dom :as rdom]))
 
 (defn app []
-  [:h1 "Create Reagent App"])
+  [:div
+   [:section.todoapp
+    [:div "Task entry"]
+    [:div
+     [:div "Task list"]
+     [:div "Footer controls"]]]
+   [:footer.info
+    [:p "Footer info"]]])
 
 (defn render []
   (rdom/render [app] (.getElementById js/document "root")))
