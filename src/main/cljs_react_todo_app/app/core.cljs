@@ -33,19 +33,18 @@
 (defn toggle-done [id]
   (swap! todos update-in [id :done] not))
 
+(defn mmap [m f g]
+  (->> m
+       (f g)
+       (into (empty m))))
+
 (defn complete-all-toggle [b]
   (let [g #(assoc-in % [1 :done] b)]
-    (swap! todos (fn [m]
-                   (->> m
-                        (map g)
-                        (into (empty m)))))))
+    (swap! todos mmap map g)))
 
 (defn clear-completed []
   (let [g #(get-in % [1 :done])]
-    (swap! todos (fn [m]
-                   (->> m
-                        (remove g)
-                        (into (empty m)))))))
+    (swap! todos mmap remove g)))
 
 ;; ----- Seed -----
 
