@@ -12,12 +12,28 @@
 
 (defonce todos (r/atom initial-todos-sorted))
 
+(defonce counter (r/atom 3))
+
+;; ----- Utils -----
+
+(defn add-todo [text]
+  (let [id (swap! counter inc)
+        new-todo {:id id :title text :done false}]
+    (swap! todos assoc id new-todo)))
+
 ;; ----- Views -----
 
 (defn todo-input []
-  [:input {:class "new-todo"
-           :placeholder "Todo input"
-           :type "text"}])
+  (let [input-text (r/atom "")
+        update-text #(reset! input-text %)
+        save #(add-todo @input-text)]
+    (fn []
+      [:input {:class "new-todo"
+               :placeholder "Todo input"
+               :type "text"
+               :value @input-text
+               :on-blur save
+               :on-change #(update-text (.. % -target -value))}])))
 
 (defn task-entry []
   [:header.header
