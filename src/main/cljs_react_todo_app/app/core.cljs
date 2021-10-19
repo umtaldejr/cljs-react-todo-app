@@ -33,6 +33,13 @@
 (defn toggle-done [id]
   (swap! todos update-in [id :done] not))
 
+(defn complete-all-toggle [b]
+  (let [g #(assoc-in % [1 :done] b)]
+    (swap! todos (fn [m]
+                   (->> m
+                        (map g)
+                        (into (empty m)))))))
+
 ;; ----- Seed -----
 
 (defonce init (do
@@ -58,6 +65,7 @@
     (fn [{:keys [class placeholder]}]
       [:input {:class class
                :placeholder placeholder
+               :auto-focus true
                :type "text"
                :value @input-text
                :on-blur save
@@ -90,8 +98,15 @@
                       :on-stop #(reset! editing false)}])])))
 
 (defn task-list []
-  (let [items (vals @todos)]
+  (let [items (vals @todos)
+        all-completed? (every? :done items)]
     [:section.main
+     [:input {:id "toggle-all"
+              :class "toggle-all"
+              :type "checkbox"
+              :checked all-completed?
+              :on-change #(complete-all-toggle (not all-completed?))}]
+     [:label {:for "toggle-all"} "Mark all as completed"]
      [:ul.todo-list
       (for [todo items]
         ^{:key (:id todo)} [todo-item todo])]]))
