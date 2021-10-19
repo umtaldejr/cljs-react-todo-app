@@ -39,21 +39,21 @@
 
 ;; ----- Views -----
 
-(defn todo-input []
+(defn todo-input [{:keys [on-save ]}]
   (let [input-text (r/atom "")
         update-text #(reset! input-text %)
         stop #(reset! input-text "")
         save #(let [trimmed-text (-> @input-text str str/trim)]
-                (if-not (empty? trimmed-text) (add-todo trimmed-text))
+                (if-not (empty? trimmed-text) (on-save trimmed-text))
                 (stop))
         key-pressed #(case %
                        "Enter" (save)
                        "Esc" (stop)
                        "Escape" (stop)
                        nil)]
-    (fn []
-      [:input {:class "new-todo"
-               :placeholder "Todo input"
+    (fn [{:keys [class placeholder]}]
+      [:input {:class class
+               :placeholder placeholder
                :type "text"
                :value @input-text
                :on-blur save
@@ -63,7 +63,9 @@
 (defn task-entry []
   [:header.header
    [:h1 "todos"]
-   [todo-input]])
+   [todo-input {:class "new-todo"
+                :placeholder "What needs to be done?"
+                :on-save add-todo}]])
 
 (defn todo-item [{:keys [id title done]}]
   [:li {:class (when done "completed ")}
