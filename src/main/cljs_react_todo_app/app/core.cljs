@@ -40,6 +40,13 @@
                         (map g)
                         (into (empty m)))))))
 
+(defn clear-completed []
+  (let [g #(get-in % [1 :done])]
+    (swap! todos (fn [m]
+                   (->> m
+                        (remove g)
+                        (into (empty m)))))))
+
 ;; ----- Seed -----
 
 (defonce init (do
@@ -112,8 +119,11 @@
         ^{:key (:id todo)} [todo-item todo])]]))
 
 (defn footer-controls []
-  [:footer.footer
-   [:div "Footer controls"]])
+  (let [items (vals @todos)
+        done-count (count (filter :done items))]
+    [:footer.footer
+     (when (pos? done-count)
+       [:button.clear-completed {:on-click clear-completed} "Clear completed"])]))
 
 (defn app []
   [:div
