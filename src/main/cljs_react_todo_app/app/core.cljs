@@ -1,13 +1,31 @@
 (ns cljs-react-todo-app.app.core
   (:require [reagent.dom :as rdom]))
 
+(defn todo-input []
+  [:input {:class "new-todo"
+           :placeholder "Todo input"
+           :type "text"}])
+
+(defn task-entry []
+  [:header.header
+   [:h1 "todos"]
+   [todo-input]])
+
+(defn task-list []
+  [:section.main
+   [:div "Todo list"]])
+
+(defn footer-controls []
+  [:footer.footer
+   [:div "Footer controls"]])
+
 (defn app []
   [:div
    [:section.todoapp
-    [:div "Task entry"]
+    [task-entry]
     [:div
-     [:div "Task list"]
-     [:div "Footer controls"]]]
+     [task-list]
+     [footer-controls]]]
    [:footer.info
     [:p "Footer info"]]])
 
