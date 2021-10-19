@@ -6,15 +6,9 @@
 
 ;; ----- App State -----
 
-(def initial-todos {1 {:id 1, :title "Do laundry", :done false}
-                    3 {:id 3, :title "Buy groceries", :done false}
-                    2 {:id 2, :title "Wash dishes", :done true}})
+(defonce todos (r/atom (sorted-map)))
 
-(def initial-todos-sorted (into (sorted-map) initial-todos))
-
-(defonce todos (r/atom initial-todos-sorted))
-
-(defonce counter (r/atom 3))
+(defonce counter (r/atom 0))
 
 ;; ----- Watch -----
 
@@ -29,6 +23,16 @@
   (let [id (swap! counter inc)
         new-todo {:id id :title text :done false}]
     (swap! todos assoc id new-todo)))
+
+(defn delete-todo [id]
+  (swap! todos dissoc id))
+
+;; ----- Seed -----
+
+(defonce init (do
+                (add-todo "Do laundry")
+                (add-todo "Wash dishes")
+                (add-todo "Buy groceries")))
 
 ;; ----- Views -----
 
@@ -58,10 +62,11 @@
    [:h1 "todos"]
    [todo-input]])
 
-(defn todo-item [{:keys [title]}]
+(defn todo-item [{:keys [id title]}]
   [:li
    [:div.view
-    [:label title]]])
+    [:label title]
+    [:button.destroy {:on-click #(delete-todo id)}]]])
 
 (defn task-list []
   (let [items (vals @todos)]
@@ -78,9 +83,10 @@
   [:div
    [:section.todoapp
     [task-entry]
-    [:div
-     [task-list]
-     [footer-controls]]]
+    (when (seq @todos)
+      [:div
+       [task-list]
+       [footer-controls]])]
    [:footer.info
     [:p "Footer info"]]])
 
