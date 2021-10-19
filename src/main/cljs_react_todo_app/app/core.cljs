@@ -1,6 +1,7 @@
 (ns cljs-react-todo-app.app.core
   (:require [reagent.core :as r]
             [reagent.dom :as rdom]
+            [clojure.string :as str]
             [cljs.pprint :as pp]))
 
 ;; ----- App State -----
@@ -35,8 +36,9 @@
   (let [input-text (r/atom "")
         update-text #(reset! input-text %)
         stop #(reset! input-text "")
-        save #(do (add-todo @input-text)
-                  (stop))
+        save #(let [trimmed-text (-> @input-text str str/trim)]
+                (if-not (empty? trimmed-text) (add-todo trimmed-text))
+                (stop))
         key-pressed #(case %
                        "Enter" (save)
                        "Esc" (stop)
