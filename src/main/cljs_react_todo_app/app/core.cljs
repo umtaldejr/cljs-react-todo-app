@@ -25,8 +25,11 @@
    [todo-input]])
 
 (defn task-list []
-  [:section.main
-   [:div "Todo list"]])
+  (let [items (vals @todos)]
+    [:section.main
+     [:ul.todo-list
+      (for [todo items]
+        ^{:key (:id todo)} [:li (:title todo)])]]))
 
 (defn footer-controls []
   [:footer.footer
