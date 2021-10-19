@@ -27,6 +27,9 @@
 (defn delete-todo [id]
   (swap! todos dissoc id))
 
+(defn save-todo [id title]
+  (swap! todos assoc-in [id :title] title))
+
 (defn toggle-done [id]
   (swap! todos update-in [id :done] not))
 
@@ -39,10 +42,11 @@
 
 ;; ----- Views -----
 
-(defn todo-input [{:keys [on-save ]}]
-  (let [input-text (r/atom "")
+(defn todo-input [{:keys [title on-save on-stop]}]
+  (let [input-text (r/atom title)
         update-text #(reset! input-text %)
-        stop #(reset! input-text "")
+        stop #(do (reset! input-text "")
+                  (when on-stop (on-stop)))
         save #(let [trimmed-text (-> @input-text str str/trim)]
                 (if-not (empty? trimmed-text) (on-save trimmed-text))
                 (stop))
@@ -67,15 +71,23 @@
                 :placeholder "What needs to be done?"
                 :on-save add-todo}]])
 
-(defn todo-item [{:keys [id title done]}]
-  [:li {:class (when done "completed ")}
-   [:div.view
-    [:input {:class "toggle"
-             :type "checkbox"
-             :checked done
-             :on-change #(toggle-done id)}]
-    [:label title]
-    [:button.destroy {:on-click #(delete-todo id)}]]])
+(defn todo-item [_props-map]
+  (let [editing (r/atom false)]
+    (fn [{:keys [id title done]}]
+      [:li {:class (str (when done "completed ")
+                        (when @editing "editing"))}
+       [:div.view
+        [:input {:class "toggle"
+                 :type "checkbox"
+                 :checked done
+                 :on-change #(toggle-done id)}]
+        [:label {:on-double-click #(reset! editing true)} title]
+        [:button.destroy {:on-click #(delete-todo id)}]]
+       (when @editing
+         [todo-input {:class "edit"
+                      :title title
+                      :on-save (fn [text] (save-todo id text))
+                      :on-stop #(reset! editing false)}])])))
 
 (defn task-list []
   (let [items (vals @todos)]
@@ -97,7 +109,7 @@
        [task-list]
        [footer-controls]])]
    [:footer.info
-    [:p "Footer info"]]])
+    [:p "Double-click to edit a to-do"]]])
 
 ;; ----- Render -----
 
