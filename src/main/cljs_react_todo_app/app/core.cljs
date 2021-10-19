@@ -27,6 +27,9 @@
 (defn delete-todo [id]
   (swap! todos dissoc id))
 
+(defn toggle-done [id]
+  (swap! todos update-in [id :done] not))
+
 ;; ----- Seed -----
 
 (defonce init (do
@@ -62,9 +65,13 @@
    [:h1 "todos"]
    [todo-input]])
 
-(defn todo-item [{:keys [id title]}]
-  [:li
+(defn todo-item [{:keys [id title done]}]
+  [:li {:class (when done "completed ")}
    [:div.view
+    [:input {:class "toggle"
+             :type "checkbox"
+             :checked done
+             :on-change #(toggle-done id)}]
     [:label title]
     [:button.destroy {:on-click #(delete-todo id)}]]])
 
