@@ -3,7 +3,8 @@
   "src/test"]
 
  :dependencies
- [[reagent            "1.0.0"]
+ [[reagent "1.0.0"]
+  [clj-commons/secretary "1.2.4"]
   [binaryage/devtools "1.0.2"]]
 
  :dev-http

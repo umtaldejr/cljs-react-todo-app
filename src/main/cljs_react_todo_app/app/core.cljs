@@ -3,11 +3,17 @@
             [reagent.dom :as rdom]
             [clojure.string :as str]
             [cljs.pprint :as pp]
-            [cljs.reader :as reader]))
+            [cljs.reader :as reader]
+            [secretary.core :as secretary :refer-macros [defroute]]
+            [goog.events :as gevents]
+            [goog.history.EventType :as EventType])
+  (:import goog.history.Html5History))
 
 ;; ----- App State -----
 
 (defonce todos (r/atom (sorted-map)))
+
+(defonce showing (r/atom :all))
 
 ;; ----- Local Storage -----
 
@@ -31,6 +37,9 @@
              (pp/pprint new-state)))
 
 ;; ----- Utils -----
+
+(defn set-showing [kw]
+  (reset! showing kw))
 
 (defn allocate-next-id [todos]
   ((fnil inc 0) (last (keys todos))))
@@ -65,10 +74,25 @@
 ;; ----- Seed -----
 
 #_(defonce init (do
-                (add-todo "Do laundry")
-                (add-todo "Wash dishes")
-                (add-todo "Buy groceries")))
+                  (add-todo "Do laundry")
+                  (add-todo "Wash dishes")
+                  (add-todo "Buy groceries")))
 
+;; ----- Routing -----
+
+(defn hook-browser-navigation! []
+  (doto (Html5History.)
+    (gevents/listen
+     EventType/NAVIGATE
+     (fn [event]
+       (secretary/dispatch! (.. ^js event -token))))
+    (.setEnabled true)))
+
+(defn app-routes []
+  (secretary/set-config! :prefix "#")
+  (defroute "/" [] (set-showing :all))
+  (defroute "/:filter" [filter] (set-showing (keyword filter)))
+  (hook-browser-navigation!))
 
 ;; ----- Views -----
 
@@ -120,7 +144,7 @@
                       :on-save (fn [text] (save-todo id text))
                       :on-stop #(reset! editing false)}])])))
 
-(defn task-list [showing]
+(defn task-list []
   (let [items (vals @todos)
         filter-fn (case @showing
                     :done :done
@@ -139,14 +163,14 @@
       (for [todo visible-items]
         ^{:key (:id todo)} [todo-item todo])]]))
 
-(defn footer-controls [showing]
+(defn footer-controls []
   (let [items (vals @todos)
         done-count (count (filter :done items))
         active-count (- (count items) done-count)
         props-for (fn [kw]
                     {:class (when (= kw @showing) "selected")
                      :on-click #(reset! showing kw)
-                     :href "#"})]
+                     :href (str "#/" (name kw))})]
     [:footer.footer
      [:span.todo-count
       [:strong active-count] " " (case active-count 1 "item" "items") " left"]
@@ -158,17 +182,15 @@
        [:button.clear-completed {:on-click clear-completed} "Clear completed"])]))
 
 (defn app []
-  (let [showing (r/atom :all)]
-    (fn []
+  [:div
+   [:section.todoapp
+    [task-entry]
+    (when (seq @todos)
       [:div
-       [:section.todoapp
-        [task-entry]
-        (when (seq @todos)
-          [:div
-           [task-list showing]
-           [footer-controls showing]])]
-       [:footer.info
-        [:p "Double-click to edit a to-do"]]])))
+       [task-list]
+       [footer-controls]])]
+   [:footer.info
+    [:p "Double-click to edit a to-do"]]])
 
 ;; ----- Render -----
 
@@ -177,6 +199,7 @@
 
 (defn ^:export main []
   (local-storage->todos)
+  (app-routes)
   (render))
 
 (defn ^:dev/after-load reload! []
