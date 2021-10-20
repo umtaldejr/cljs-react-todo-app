@@ -14,67 +14,66 @@
 (defonce db (r/atom {:todos (sorted-map)
                      :showing :all}))
 
-(defonce todos (r/cursor db [:todos]))
-
-(defonce showing (r/cursor db [:showing]))
-
 ;; ----- Local Storage -----
 
 (def local-storage-key "todo-app")
 
 (defn todos->local-storage []
-  (.setItem js/localStorage local-storage-key (str @todos)))
+  (.setItem js/localStorage local-storage-key (str (:todos @db))))
 
 (defn local-storage->todos []
   (let [edn-map-todos (.getItem js/localStorage local-storage-key)
         unsorted-todos (some->> edn-map-todos reader/read-string)
         sorted-todos (into (sorted-map) unsorted-todos)]
-    (reset! todos sorted-todos)))
+    (swap! db assoc :todos sorted-todos)))
 
 ;; ----- Watch -----
 
-(add-watch todos :todos
-           (fn [key _atom _old-state new-state]
-             (todos->local-storage)
-             (println "---" key "atom changed ---")
-             (pp/pprint new-state)))
+(add-watch db :db
+           (fn [key _atom old-state new-state]
+             (when (not= (:todos new-state) (:todos old-state))
+               (todos->local-storage)
+               (println "---" key "atom changed ---")
+               (pp/pprint new-state))))
 
 ;; ----- Utils -----
 
 (defn set-showing [kw]
-  (reset! showing kw))
+  (swap! db assoc :showing kw))
 
 (defn allocate-next-id [todos]
   ((fnil inc 0) (last (keys todos))))
 
 (defn add-todo [text]
-  (let [id (allocate-next-id @todos)
+  (let [id (allocate-next-id (:todos @db))
         new-todo {:id id :title text :done false}]
-    (swap! todos assoc id new-todo)))
+    (swap! db assoc-in [:todos id] new-todo)))
 
 (defn delete-todo [id]
-  (swap! todos dissoc id))
+  (swap! db update-in [:todos] dissoc id))
 
 (defn save-todo [id title]
-  (swap! todos assoc-in [id :title] title))
+  (swap! db assoc-in [:todos id :title] title))
 
 (defn toggle-done [id]
-  (swap! todos update-in [id :done] not))
+  (swap! db update-in [:todos id :done] not))
 
 (defn complete-all-toggle []
-  (let [b (not-every? :done (vals @todos))
+  (let [todos (:todos @db)
+        b (not-every? :done (vals todos))
         g (fn [m id]
             (assoc-in m [id :done] b))
-        ids (keys @todos)
-        updated-todos (reduce g @todos ids)]
-    (reset! @todos updated-todos)))
+        ids (keys todos)
+        updated-todos (reduce g todos ids)]
+    (swap! db assoc :todos updated-todos)))
 
 (defn clear-completed []
-  (let [done-ids (->> (vals @todos)
+  (let [todos (:todos @db)
+        done-ids (->> (vals todos)
                       (filter :done)
                       (map :id))
-        updated-todos (reduce dissoc @todos done-ids)]
-    (reset! todos updated-todos)))
+        updated-todos (reduce dissoc todos done-ids)]
+    (swap! db assoc :todos updated-todos)))
 
 ;; ----- Seed -----
 
@@ -150,8 +149,8 @@
                       :on-stop #(reset! editing false)}])])))
 
 (defn task-list []
-  (let [items (vals @todos)
-        filter-fn (case @showing
+  (let [items (vals (:todos @db))
+        filter-fn (case (:showing @db)
                     :done :done
                     :active (complement :done)
                     :all identity)
@@ -169,12 +168,12 @@
         ^{:key (:id todo)} [todo-item todo])]]))
 
 (defn footer-controls []
-  (let [items (vals @todos)
+  (let [items (vals (:todos @db))
         done-count (count (filter :done items))
         active-count (- (count items) done-count)
         props-for (fn [kw]
-                    {:class (when (= kw @showing) "selected")
-                     :on-click #(reset! showing kw)
+                    {:class (when (= kw (:showing @db)) "selected")
+                     :on-click #(swap! db assoc :showing kw)
                      :href (str "#/" (name kw))})]
     [:footer.footer
      [:span.todo-count
@@ -190,7 +189,7 @@
   [:div
    [:section.todoapp
     [task-entry]
-    (when (seq @todos)
+    (when (seq (:todos @db))
       [:div
        [task-list]
        [footer-controls]])]
