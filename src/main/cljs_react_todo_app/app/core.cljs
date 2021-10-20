@@ -11,9 +11,12 @@
 
 ;; ----- App State -----
 
-(defonce todos (r/atom (sorted-map)))
+(defonce db (r/atom {:todos (sorted-map)
+                     :showing :all}))
 
-(defonce showing (r/atom :all))
+(defonce todos (r/cursor db [:todos]))
+
+(defonce showing (r/cursor db [:showing]))
 
 ;; ----- Local Storage -----
 
@@ -58,18 +61,20 @@
 (defn toggle-done [id]
   (swap! todos update-in [id :done] not))
 
-(defn mmap [m f g]
-  (->> m
-       (f g)
-       (into (empty m))))
-
-(defn complete-all-toggle [b]
-  (let [g #(assoc-in % [1 :done] b)]
-    (swap! todos mmap map g)))
+(defn complete-all-toggle []
+  (let [b (not-every? :done (vals @todos))
+        g (fn [m id]
+            (assoc-in m [id :done] b))
+        ids (keys @todos)
+        updated-todos (reduce g @todos ids)]
+    (reset! @todos updated-todos)))
 
 (defn clear-completed []
-  (let [g #(get-in % [1 :done])]
-    (swap! todos mmap remove g)))
+  (let [done-ids (->> (vals @todos)
+                      (filter :done)
+                      (map :id))
+        updated-todos (reduce dissoc @todos done-ids)]
+    (reset! todos updated-todos)))
 
 ;; ----- Seed -----
 
@@ -157,7 +162,7 @@
               :class "toggle-all"
               :type "checkbox"
               :checked all-completed?
-              :on-change #(complete-all-toggle (not all-completed?))}]
+              :on-change #(complete-all-toggle)}]
      [:label {:for "toggle-all"} "Mark all as completed"]
      [:ul.todo-list
       (for [todo visible-items]
